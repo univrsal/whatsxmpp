@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "command": "node ${workspaceFolder}/src/index.js",
+            "name": "Debug",
+            "request": "launch",
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}/src"
+        }
+    ]
+}

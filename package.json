@@ -1,0 +1,29 @@
+{
+  "name": "whatsxmpp",
+  "version": "0.1.0",
+  "description": "WhatsApp and XMPP bridge",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/univrsal/whatsxmpp.git"
+  },
+  "keywords": [
+    "whatsapp",
+    "xmpp",
+    "bridge"
+  ],
+  "author": "univrsal",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/univrsal/whatsxmpp/issues"
+  },
+  "homepage": "https://github.com/univrsal/whatsxmpp#readme",
+  "dependencies": {
+    "qrcode": "^1.4.4",
+    "whatsapp-web.js": "^1.12.3",
+    "xmpp.js": "^0.13.0"
+  }
+}

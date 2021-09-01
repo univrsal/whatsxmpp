@@ -1,0 +1,7 @@
+node_modules
+package-lock.json
+# We only want the launch json
+.vscode/*
+!.vscode/launch.json
+src/log/*
+src/whats_app_client_session.json
