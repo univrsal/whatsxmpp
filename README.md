@@ -5,9 +5,13 @@ The WhatsApp Web session runs headless and therfore can be hosted on a server, b
 initial login has to be done over the qr code which seems to cause issues because the app
 expects a white background with a black qr code, but terminals are usually the opposite.
 
+This component is intended to be run alongside your own xmpp server and will only bridge
+between one xmpp user and one WhatsApp account.
+
 What works
 - Receiving messages from a WhatsApp user
 - Receiving messages from a WhatsApp group (All messages in that group chat will be bridged to one contact currently)
+- Sending messages in a group or to a user from XMPP
 
 Todo:
 - Forward contacts via [XEP-0144](https://xmpp.org/extensions/xep-0144.html)
