@@ -5,3 +5,4 @@ package-lock.json
 !.vscode/launch.json
 src/log/*
 src/whats_app_client_session.json
+src/chat_map.json

@@ -2,6 +2,7 @@
 var log = require('./log');
 const { component, xml } = require('@xmpp/component');
 const debug = require('@xmpp/debug');
+var fs = require('fs');
 
 const xmpp = component({
     service: 'xmpp://localhost:8888',
@@ -19,6 +20,17 @@ class XMPP {
         xmpp.on('offline', () => this.on_offline());
         xmpp.on('stanza', (stanza) => this.on_stanza(stanza));
         xmpp.on('online', (address) => this.on_online(address));
+        this.chat_map = {};
+        fs.open('./chat_map.json', 'r', (err, fd) => {
+            if (!err) {
+                let content = fs.readFileSync(fd);
+                try {
+                    this.chat_map = JSON.parse(content);    
+                } catch (error) {
+                    log.error('Failed to parse chat map json: ' + error);
+                }
+            }
+        });
     }
 
     // Make sure it's a valid alpha numerical name
@@ -37,31 +49,48 @@ class XMPP {
     process_whats_app_message(msg) {
         msg.getContact().then(contact => {
             msg.getChat().then(chat => {
+                // The messages are proxied via their internal whatsapp id, so we can map
+                // an xmpp chat to a whatsapp chat, this makes it hard to identify a chat for
+                // users though, so if this is the first time we encounter this chat we send
+                // an additional info message to allow users to save this chat with user friendly
+                // aliases
+                let msg_prefix = '';
+                let from = this.get_sender_from_contact(contact);
+                let id = chat.id._serialized.replace('@', '.at.') + '@wa.bridge';
+                if (!this.chat_map[id]) {
+                    msg_prefix = 'This is the first message bridged for this contact/chat, here\'s some info:\n';
+                    if (chat.isGroup)
+                        msg_prefix += 'The chat is known as ' + chat.name + '\n';
+                    else
+                        msg_prefix += 'The user is known as ' + from + '\n';
+                }
+                this.chat_map[id] = chat.id._serialized;
+                let message = null;
                 if (chat.isGroup) {
                     // Group messages should ideally use xmpp conference chats, but for now we just proxy
                     // them to one single chat since that's easier for now
-                    const message = xml(
+                    message = xml(
                         'message',
-                        { type: 'chat', from: this.format_chat_name(chat.name), to: this.xmpp_user },
-                        xml('body', {}, this.get_sender_from_contact(contact) + ': ' + msg.body)
+                        { type: 'chat', from: id, to: this.xmpp_user },
+                        xml('body', {}, msg_prefix + from + ': ' + msg.body)
                     );
-                    xmpp.send(message);
                 } else {                     
-                    // Messages are proxied via the contact number, so currently the 
-                    // user is expected to save the number as a contact manually, but there
-                    // seems to be a way to forward the contact info via roster item exchange
-                    // no idea how though
-                    // https://xmpp.org/extensions/xep-0144.html
-                    const message = xml(
+                    message = xml(
                         'message',
-                        { type: 'chat', from: contact.number + '@wa.bridge', to: this.xmpp_user },
-                        xml('body', {}, msg.body)
-                    );
-                    // Confirm that we've seen the message after it was forwarded via xmpp
-                    xmpp.send(message).then(() => chat.sendSeen());
+                        { type: 'chat', from: id, to: this.xmpp_user },
+                        xml('body', {}, msg_prefix + msg.body)
+                    );    
                 }
+                // Confirm that we've seen the message after it was forwarded via xmpp
+                xmpp.send(message).then(() => chat.sendSeen());
             })
         })
+    }
+
+    stop() {
+        fs.writeFileSync('./chat_map.json', JSON.stringify(this.chat_map));
+        xmpp.stop();
+        process.exit();
     }
 
     start() {
@@ -82,10 +111,9 @@ class XMPP {
 
     on_stanza(stanza) {
         log.debug(stanza);
-        if (stanza.is('message')) {
-            if (stanza.children[0].name == 'body') {
-                let message_elements = stanza.children[0].children;
-            }
+        if (stanza.is('message') && stanza.children.length > 0 && stanza.children[0].name == 'body') {
+            let id = stanza.attrs['to'];
+            this.bridge.forward_to_whats_app({ data: stanza, chat_id: this.chat_map[id]});
         }
     }
 }

@@ -11,7 +11,7 @@ log.info('Starting whatsapp-xmpp bridge...');
 
 process.on('SIGINT', function() {
     log.info("Received exit signal, shutting down...");
-    process.exit();
+    xmpp_component.stop();
 });
 let bridge = new data_bridge.Bridge();
 let xmpp_component = new xmpp.XMPP(bridge, 'uni@vrsal.de');

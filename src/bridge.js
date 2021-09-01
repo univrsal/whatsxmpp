@@ -13,9 +13,8 @@ class Bridge {
 
     forward_to_whats_app(xmpp_message)
     {
-        if (this.whatsapp) {
-            
-        }
+        if (this.whatsapp)
+            this.whatsapp.process_xmpp_message(xmpp_message);
     }
 }
 module.exports = { Bridge };

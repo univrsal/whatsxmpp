@@ -46,19 +46,6 @@ class WAClient {
 
     on_message(message) {
         this.bridge.forward_to_xmpp(message);
-        // Forward message to xmpp user
-        // Broadcast message and save to database
-        // Forward body (message text), from (number or contact), to (own number or response?), timestamp, type (direct chat or group?)
-        /*this.broadcast_message({
-            id: 'message_received',
-            data: {
-                text: message.body,
-                from: message.from,
-                to: message.to,
-                timestamp: message.timestamp,
-                type: message.type,
-            },
-        });*/
     }
 
     on_qr_code(qr) {
@@ -98,6 +85,13 @@ class WAClient {
 
     onReady() {
         log.info('Client ready');
+    }
+
+    process_xmpp_message(message) {
+        this.client.getChatById(message.chat_id).then(chat => {
+            this.client.sendMessage(message.chat_id, message.data.children[0].children[0]);
+        });
+        
     }
 }
 
