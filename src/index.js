@@ -14,6 +14,6 @@ process.on('SIGINT', function() {
     xmpp_component.stop();
 });
 let bridge = new data_bridge.Bridge();
-let xmpp_component = new xmpp.XMPP(bridge, 'uni@vrsal.de');
+let xmpp_component = new xmpp.XMPP(bridge, 'user@myxmpp.com');
 let client = new wa.WAClient(bridge);
 xmpp_component.start();

@@ -7,7 +7,7 @@ var fs = require('fs');
 const xmpp = component({
     service: 'xmpp://localhost:8888',
     domain: 'wa.bridge',
-    password: 'ayyyfml123',
+    password: 'supersecretpassword',
 });
 
 class XMPP {
