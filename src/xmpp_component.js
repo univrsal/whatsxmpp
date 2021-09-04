@@ -46,6 +46,15 @@ class XMPP {
         return contact.numer;
     }
 
+    send_as_transfer(text) {
+        const message = xml(
+            "message",
+            { type: "chat", to: this.xmpp_user },
+            xml("body", {}, text),
+          );
+        xmpp.send(message);
+    }
+
     process_whats_app_message(msg) {
         msg.getContact().then(contact => {
             msg.getChat().then(chat => {
