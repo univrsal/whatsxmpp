@@ -6,3 +6,4 @@ package-lock.json
 src/log/*
 src/whats_app_client_session.json
 src/chat_map.json
+src/xmpp_component.cfg

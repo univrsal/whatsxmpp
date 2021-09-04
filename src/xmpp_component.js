@@ -4,18 +4,32 @@ const { component, xml } = require("@xmpp/component");
 const debug = require("@xmpp/debug");
 var fs = require("fs");
 
-const xmpp = component({
-    service: "xmpp://localhost:8888",
-    domain: "wa.bridge",
-    password: "supersecretpassword",
-});
+var config = null;
+try {
+    config = JSON.parse(fs.readFileSync("./xmpp_component.cfg"));
+} catch (ex) {
+    // Ignore
+}
+
+if (!config) {
+    config = {
+        service: "xmpp://localhost:8888",
+        domain: "wa.bridge",
+        password: "supersecretpassword",
+        user: "someone",
+    };
+    fs.writeFileSync("./xmpp_component.cfg", JSON.stringify(config, null, 4));
+}
+
+const xmpp = component(config);
 
 class XMPP {
-    constructor(bridge, xmpp_user) {
+    constructor(bridge) {
         this.xmpp = xmpp;
         this.bridge = bridge;
         bridge.xmpp = this;
-        this.xmpp_user = xmpp_user;
+        this.xmpp_user = config["user"];
+        this.domain = config["domain"];
         xmpp.on("error", (err) => this.on_error(err));
         xmpp.on("offline", () => this.on_offline());
         xmpp.on("stanza", (stanza) => this.on_stanza(stanza));
@@ -35,7 +49,7 @@ class XMPP {
 
     // Make sure it's a valid alpha numerical name
     format_chat_name(name) {
-        return name.replace(/[^a-z0-9]/gi, "") + "@wa.bridge";
+        return name.replace(/[^a-z0-9]/gi, "") + "@" + this.domain;
     }
 
     get_sender_from_contact(contact) {
@@ -61,7 +75,9 @@ class XMPP {
                 let admin = this.get_sender_from_contact(contact);
                 let group = chat.name;
                 let id =
-                    chat.id._serialized.replace("@", ".at.") + "@wa.bridge";
+                    chat.id._serialized.replace("@", ".at.") +
+                    "@" +
+                    this.domain;
                 if (!this.chat_map[id]) {
                     this.chat_map[id] = chat.id._serialized;
                     this.save_chat_map();
@@ -95,7 +111,9 @@ class XMPP {
                 let msg_prefix = "";
                 let from = this.get_sender_from_contact(contact);
                 let id =
-                    chat.id._serialized.replace("@", ".at.") + "@wa.bridge";
+                    chat.id._serialized.replace("@", ".at.") +
+                    "@" +
+                    this.domain;
                 if (!this.chat_map[id]) {
                     msg_prefix =
                         "This is the first message bridged for this contact/chat, here's some info:\n";
