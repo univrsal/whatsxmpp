@@ -3,7 +3,7 @@ package-lock.json
 # We only want the launch json
 .vscode/*
 !.vscode/launch.json
-src/log/*
+log/*
 whats_app_client_session.json
 chat_map.json
 xmpp_component.cfg
