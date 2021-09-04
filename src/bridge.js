@@ -17,6 +17,7 @@ class Bridge {
     get_xmpp() {
         return this.xmpp;
     }
+
     get_whatsapp() {
         return this.whatsapp;
     }

@@ -33,6 +33,7 @@ class WAClient {
             });
             this.client.initialize();
             this.qr_code = undefined;
+            this.client.on("group_join", (group_notif) => this.group_join(group_notif));
             this.client.on("disconnected", (reason) =>
                 this.state_changed(reason)
             );
@@ -49,6 +50,10 @@ class WAClient {
             this.client.on("ready", () => this.onReady());
             this.client.on("message", (message) => this.on_message(message));
         });
+    }
+
+    group_join(group_notif) {
+        this.bridge.get_xmpp().process_group_joined(group_notif);
     }
 
     state_changed(state) {

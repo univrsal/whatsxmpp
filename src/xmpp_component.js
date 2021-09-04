@@ -55,6 +55,35 @@ class XMPP {
         xmpp.send(message);
     }
 
+    process_group_joined(group_notif) {
+        group_notif.getContact((contact) => {
+            group_notif.getChat((chat) => {
+                let admin = this.get_sender_from_contact(contact);
+                let group = chat.name;
+                let id =
+                    chat.id._serialized.replace("@", ".at.") + "@wa.bridge";
+                if (!this.chat_map[id]) {
+                    this.chat_map[id] = chat.id._serialized;
+                    this.save_chat_map();
+                }
+                xmpp.send(
+                    xml(
+                        "message",
+                        { type: "chat", from: id, to: this.xmpp_user },
+                        xml(
+                            "body",
+                            {},
+                            "You've just been added to the group '" +
+                                group +
+                                "' by " +
+                                admin
+                        )
+                    )
+                );
+            });
+        });
+    }
+
     process_whats_app_message(msg) {
         msg.getContact().then((contact) => {
             msg.getChat().then((chat) => {
@@ -74,8 +103,9 @@ class XMPP {
                         msg_prefix +=
                             "The chat is known as " + chat.name + "\n";
                     else msg_prefix += "The user is known as " + from + "\n";
+                    this.chat_map[id] = chat.id._serialized;
+                    this.save_chat_map();
                 }
-                this.chat_map[id] = chat.id._serialized;
                 let message = null;
                 if (chat.isGroup) {
                     // Group messages should ideally use xmpp conference chats, but for now we just proxy
@@ -98,8 +128,12 @@ class XMPP {
         });
     }
 
-    stop() {
+    save_chat_map() {
         fs.writeFileSync("./chat_map.json", JSON.stringify(this.chat_map));
+    }
+
+    stop() {
+        this.save_chat_map();
         xmpp.stop();
         process.exit();
     }
