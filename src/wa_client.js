@@ -64,7 +64,7 @@ class WAClient {
                 }, 5000)
                 break;
             case "CONNECTED":
-                log.info("WhatsApp client connected"));
+                log.info("WhatsApp client connected");
                 this.connected = true;
                 break;
         }
