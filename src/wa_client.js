@@ -115,7 +115,7 @@ class WAClient {
     }
 
     on_authenitcation_failed(msg) {
-        log.err("Client authentication failed: " + msg);
+        log.error("Client authentication failed: " + msg);
     }
 
     onReady() {
