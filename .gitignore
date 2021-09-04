@@ -4,6 +4,6 @@ package-lock.json
 .vscode/*
 !.vscode/launch.json
 **/log/*
-whats_app_client_session.json
+**/auth_info.json
 chat_map.json
 xmpp_component.cfg

@@ -69,82 +69,89 @@ class XMPP {
         xmpp.send(message);
     }
 
-    process_group_joined(group_notif) {
-        group_notif.getContact((contact) => {
-            group_notif.getChat((chat) => {
-                let admin = this.get_sender_from_contact(contact);
-                let group = chat.name;
-                let id =
-                    chat.id._serialized.replace("@", ".at.") +
-                    "@" +
-                    this.domain;
-                if (!this.chat_map[id]) {
-                    this.chat_map[id] = chat.id._serialized;
-                    this.save_chat_map();
-                }
-                xmpp.send(
-                    xml(
-                        "message",
-                        { type: "chat", from: id, to: this.xmpp_user },
-                        xml(
-                            "body",
-                            {},
-                            "You've just been added to the group '" +
-                                group +
-                                "' by " +
-                                admin
-                        )
-                    )
+    make_address(whats_app_address) {
+        return whats_app_address.replace("@", ".at.") + "@" + this.domain;
+    }
+
+    process_group_joined(data) {
+        let id = this.make_address(data.id);
+        xmpp.send(
+            xml(
+                "message",
+                { type: "chat", from: this.make },
+                xml(
+                    "body",
+                    {},
+                    "New chat made by " +
+                        data.owner +
+                        ". Subject is '" +
+                        data.subject
+                )
+            )
+        );
+
+        if (!this.chat_map[id]) this.chat_map[id] = data.id;
+    }
+
+    process_contacts(contacts) {
+        let xml_contacts = [];
+        let keys = Object.keys(contacts);
+        for (let i = 0; i < keys.length; i++) {
+            let contact = contacts[keys[i]];
+            if (contact.jid.indexOf("g.us") !== -1) continue; // no groups
+            if (contact.jid === "status@broadcast") continue; // idk what this is for
+
+            let contact_address = this.make_address(contact.jid);
+            if (this.chat_map[contact_address]) {
+                log.debug(
+                    "Skipping " + contact.notify + " they've already been added"
                 );
+                continue;
+            }
+            this.chat_map[contact_address] = contact.jid;
+
+            let id = contact.notify; // Public nickname for the user;
+            if (contact.name)
+                // Saved contact name, preferred but not always available
+                id = contact.name;
+
+            xml_contacts.push({
+                action: "add",
+                jid: contact_address,
+                name: id,
             });
+            console.log(contact);
+        }
+
+        if (xml_contacts.length === 0) return;
+
+        let roster_item_exchange = xml(
+            "message",
+            { from: "bridge@" + this.domain, to: this.xmpp_user },
+            xml(
+                "body",
+                null,
+                "These are contacts imported from you WhatsApp account"
+            ),
+            xml(
+                "x",
+                "http://jabber.org/protocol/rosterx",
+                xml_contacts.map((c, idx) =>
+                    xml("item", c, xml("group", null, "WhatsApp Contacts"))
+                )
+            )
+        );
+        this.xmpp.send(roster_item_exchange);
+        this.save_chat_map();
+    }
+
+    process_chats(chats) {
+        chats.array.forEach((chat) => {
+            // TODO
         });
     }
 
-    process_whats_app_message(msg) {
-        msg.getContact().then((contact) => {
-            msg.getChat().then((chat) => {
-                // The messages are proxied via their internal whatsapp id, so we can map
-                // an xmpp chat to a whatsapp chat, this makes it hard to identify a chat for
-                // users though, so if this is the first time we encounter this chat we send
-                // an additional info message to allow users to save this chat with user friendly
-                // aliases
-                let msg_prefix = "";
-                let from = this.get_sender_from_contact(contact);
-                let id =
-                    chat.id._serialized.replace("@", ".at.") +
-                    "@" +
-                    this.domain;
-                if (!this.chat_map[id]) {
-                    msg_prefix =
-                        "This is the first message bridged for this contact/chat, here's some info:\n";
-                    if (chat.isGroup)
-                        msg_prefix +=
-                            "The chat is known as " + chat.name + "\n";
-                    else msg_prefix += "The user is known as " + from + "\n";
-                    this.chat_map[id] = chat.id._serialized;
-                    this.save_chat_map();
-                }
-                let message = null;
-                if (chat.isGroup) {
-                    // Group messages should ideally use xmpp conference chats, but for now we just proxy
-                    // them to one single chat since that's easier for now
-                    message = xml(
-                        "message",
-                        { type: "chat", from: id, to: this.xmpp_user },
-                        xml("body", {}, msg_prefix + from + ": " + msg.body)
-                    );
-                } else {
-                    message = xml(
-                        "message",
-                        { type: "chat", from: id, to: this.xmpp_user },
-                        xml("body", {}, msg_prefix + msg.body)
-                    );
-                }
-                // Confirm that we've seen the message after it was forwarded via xmpp
-                xmpp.send(message).then(() => chat.sendSeen());
-            });
-        });
-    }
+    process_whats_app_message(msg) {}
 
     save_chat_map() {
         fs.writeFileSync("./chat_map.json", JSON.stringify(this.chat_map));

@@ -1,89 +1,116 @@
-const { Client } = require("whatsapp-web.js");
+var WA = require("@adiwajshing/baileys");
 var log = require("./log");
 var QRCode = require("qrcode");
 var fs = require("fs");
 
 class WAClient {
     constructor(bridge) {
-        this.session_cfg = null;
         this.bridge = bridge;
         this.connected = false;
         bridge.whatsapp = this;
-        fs.open("./whats_app_client_session.json", "r", (err, fd) => {
-            if (err) {
-                if (err.code === "ENOENT") {
-                    log.info(
-                        "WhatsApp session doesn't exist, creating new one."
-                    );
-                } else {
-                    log.error("Error while reading WhatsApp session: " + err);
-                }
-            } else {
-                try {
-                    this.session_cfg = JSON.parse(fs.readFileSync(fd));
-                } finally {
-                    fs.close(fd, (err) => {
-                        if (err) throw err;
-                    });
-                }
-            }
-            this.client = new Client({
-                puppeteer: { headless: true },
-                session: this.session_cfg,
-            });
-            this.client.initialize();
-            this.qr_code = undefined;
-            this.client.on("group_join", (group_notif) => this.group_join(group_notif));
-            this.client.on("disconnected", (reason) =>
-                this.state_changed(reason)
+        this.connection = new WA.WAConnection();
+        let credentials = null;
+        try {
+            credentials = fs.readFileSync("./auth_info.json");
+        } catch (error) {}
+
+        if (credentials) this.connection.loadAuthInfo(JSON.parse(credentials));
+
+        this.connection.on("open", () => {
+            fs.writeFileSync(
+                "./auth_info.json",
+                JSON.stringify(
+                    this.connection.base64EncodedAuthInfo(),
+                    null,
+                    "\t"
+                )
             );
-            this.client.on("change_state", (state) =>
-                this.state_changed(state)
-            );
-            this.client.on("qr", (qr) => this.on_qr_code(qr));
-            this.client.on("auth_failure", (msg) =>
-                this.on_authenitcation_failed(msg)
-            );
-            this.client.on("authenticated", (session) =>
-                this.on_authenticated(session)
-            );
-            this.client.on("ready", () => this.onReady());
-            this.client.on("message", (message) => this.on_message(message));
         });
+        this.connection.on("connecting", () =>
+            log.info("Connecting to WhatsApp")
+        );
+        this.connection.on("close", (data) =>
+            this.on_disconnect(data, "WhatsApp")
+        );
+        this.connection.on("ws-close", (data) =>
+            this.on_disconnect(data, "WebSocket")
+        );
+        this.connection.on("qr", (qr) => this.on_qr_code);
+        this.connection.on("connection-phone-change", (state) =>
+            this.on_phone_conection_changed(state)
+        );
+        this.connection.on("chat-new", (chat) => this.on_new_chat(chat));
+        this.connection.on("contact-update", (update) =>
+            this.on_contact_update(update)
+        );
+        this.connection.on("chat-update", (update) =>
+            this.on_chat_update(update)
+        );
+        this.connection.on("chats-received", (new_chats) =>
+            this.on_chats_received(new_chats)
+        );
+        this.connection.on("contacts-received", (contacts) =>
+            this.on_contacts_received(contacts)
+        );
+        this.connection.connect();
     }
 
-    group_join(group_notif) {
-        this.bridge.get_xmpp().process_group_joined(group_notif);
+    on_contacts_received(contacts) {
+        this.bridge.get_xmpp().process_contacts(this.connection.contacts);
     }
 
-    state_changed(state) {
-        switch (state) {
-            default:
-                this.connected = false;
-                log.warn("WhatsApp client state changed: " + state);
-                setTimeout(() => {
-                    if (!this.connected) {
-                        log.error(
-                            "Lost connection to WhatsApp and no reconnection wihting five seconds happened. Notifying XMPP"
-                        );
-                        this.bridge
-                            .get_xmpp()
-                            .send_as_transfer(
-                                "Bridge lost connection to WhatsApp"
-                            );
-                    }
-                }, 5000);
-                break;
-            case "CONNECTED":
-                log.info("WhatsApp client connected");
+    on_chats_received(new_chats) {
+        this.bridge.get_xmpp().process_chats(this.connection.chats);
+    }
+
+    on_chat_update(update) {
+        log.debug(update);
+    }
+
+    on_contact_update(update) {
+        // TODO
+        log.debug(update);
+    }
+
+    on_phone_conection_changed(state) {
+        this.connected = state;
+        if (!this.connected) this.handle_disconnect();
+        else log.info("Connected to WhatsApp");
+    }
+
+    handle_disconnect() {
+        this.connected = false;
+        // We want to tell xmpp if we lost the connection for good
+        setTimeout(() => {
+            if (this.connected === false)
                 this.bridge
-                            .get_xmpp()
-                            .send_as_transfer(
-                                "Bridge connected to WhatsApp"
-                            );
-                this.connected = true;
-                break;
+                    .get_xmpp()
+                    .send_as_transfer(
+                        "Bridge lost connection to phone/whatsapp"
+                    );
+        }, 5000);
+    }
+
+    on_new_chat(chat) {
+        if (chat.metadata) {
+            // TODO: description, participants etc.
+            let joined_data = {
+                id: chat.metadata.id,
+                owner: chat.metadata.owner,
+                subject: chat.metadata.subject,
+            };
+            this.bridge.get_xmpp().process_group_joined(joined_data);
         }
+    }
+
+    on_disconnect(data, what) {
+        log.info(
+            `Conection to ${what} closed: ` +
+                data.DisconnecReason +
+                ", reconnecting: " +
+                toString(data.isReconnecting)
+        );
+        this.handle_disconnect();
     }
 
     on_message(message) {
@@ -105,26 +132,6 @@ class WAClient {
             log.info(str);
             log.info("===========================================");
         }
-    }
-
-    on_authenticated(session) {
-        log.info("Client authenticated");
-        this.session_cfg = session;
-        fs.open("./whats_app_client_session.json", "w", (err, fd) => {
-            if (err) {
-                log.error("Error while saving WhatsApp session: " + err);
-                return;
-            }
-            fs.writeSync(fd, JSON.stringify(this.session_cfg));
-        });
-    }
-
-    on_authenitcation_failed(msg) {
-        log.error("Client authentication failed: " + msg);
-    }
-
-    onReady() {
-        log.info("Client ready");
     }
 
     process_xmpp_message(message) {
