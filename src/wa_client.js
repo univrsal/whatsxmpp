@@ -58,10 +58,16 @@ class WAClient {
                 log.warn("WhatsApp client state changed: " + state);
                 setTimeout(() => {
                     if (!this.connected) {
-                        log.error("Lost connection to WhatsApp and no reconnection wihting five seconds happened. Notifying XMPP");
-                        this.bridge.get_xmpp().send_as_transfer("Bridge lost connection to WhatsApp");
+                        log.error(
+                            "Lost connection to WhatsApp and no reconnection wihting five seconds happened. Notifying XMPP"
+                        );
+                        this.bridge
+                            .get_xmpp()
+                            .send_as_transfer(
+                                "Bridge lost connection to WhatsApp"
+                            );
                     }
-                }, 5000)
+                }, 5000);
                 break;
             case "CONNECTED":
                 log.info("WhatsApp client connected");

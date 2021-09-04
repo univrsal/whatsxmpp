@@ -1,8 +1,8 @@
-var fs = require('fs');
+var fs = require("fs");
 var debugEnabled = false;
 var maxLogFiles = 5;
-var lastLogFile = '';
-var logPath = './log/'
+var lastLogFile = "";
+var logPath = "./log/";
 
 function start() {
     fs.mkdirSync(logPath, { recursive: true });
@@ -25,7 +25,7 @@ function cleanLogFiles() {
 
         file_list.sort((a, b) => b.date - a.date);
         let counter = 0;
-        file_list.forEach(file => {
+        file_list.forEach((file) => {
             counter++;
             if (counter > maxLogFiles - 1) {
                 // delete all older files
@@ -36,9 +36,16 @@ function cleanLogFiles() {
 }
 
 function getLogFile(date) {
-    var name = logPath + date.getFullYear() + '.' + date.getMonth() + '.' + date.getDate() + '.log';
-    if (lastLogFile !== name && lastLogFile !== '') {
-        info('Cleaning log files');
+    var name =
+        logPath +
+        date.getFullYear() +
+        "." +
+        date.getMonth() +
+        "." +
+        date.getDate() +
+        ".log";
+    if (lastLogFile !== name && lastLogFile !== "") {
+        info("Cleaning log files");
         cleanLogFiles();
     }
     lastLogFile = name;
@@ -49,24 +56,23 @@ function log(level, string) {
     let date = new Date();
     let str = date.toISOString() + level + string;
     console.log(str);
-    fs.appendFile(getLogFile(date), str + '\n', 'utf8', () => { });
+    fs.appendFile(getLogFile(date), str + "\n", "utf8", () => {});
 }
 
 function info(string) {
-    log('  INFO ', string);
+    log("  INFO ", string);
 }
 
 function error(string) {
-    log(' ERROR ', string);
+    log(" ERROR ", string);
 }
 
 function warn(string) {
-    log('  WARN ', string);
+    log("  WARN ", string);
 }
 
 function debug(string) {
-    if (debugEnabled)
-        log(' DEBUG ', string);
+    if (debugEnabled) log(" DEBUG ", string);
 }
 
 module.exports = { start, enableDebug, log, info, error, warn, debug };
