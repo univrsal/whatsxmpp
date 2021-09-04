@@ -76,6 +76,11 @@ class WAClient {
                 break;
             case "CONNECTED":
                 log.info("WhatsApp client connected");
+                this.bridge
+                            .get_xmpp()
+                            .send_as_transfer(
+                                "Bridge connected to WhatsApp"
+                            );
                 this.connected = true;
                 break;
         }
