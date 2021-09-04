@@ -16,5 +16,8 @@ class Bridge {
         if (this.whatsapp)
             this.whatsapp.process_xmpp_message(xmpp_message);
     }
+
+    get_xmpp() { return this.xmpp; }
+    get_whatsapp() { return this.whatsapp; }
 }
 module.exports = { Bridge };
