@@ -23,7 +23,7 @@
   "homepage": "https://github.com/univrsal/whatsxmpp#readme",
   "dependencies": {
     "qrcode": "^1.4.4",
-    "whatsapp-web.js": "^1.12.3",
+    "whatsapp-web.js": "^1.14.1",
     "xmpp.js": "^0.13.0"
   }
 }
