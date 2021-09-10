@@ -46,6 +46,9 @@ class WAClient {
         this.connection.on("chat-update", (update) =>
             this.on_chat_update(update)
         );
+        this.connection.on("chats-update", (updates) => {
+            updates.forEach(update => this.on_chat_update(update));
+        })
         this.connection.on("chats-received", (new_chats) =>
             this.on_chats_received(new_chats)
         );
@@ -53,6 +56,10 @@ class WAClient {
             this.on_contacts_received(contacts)
         );
         this.connection.connect();
+    }
+
+    get_profile_picture(jid) {
+        return this.connection.getProfilePicture(jid);
     }
 
     on_contacts_received(contacts) {
@@ -64,6 +71,13 @@ class WAClient {
     }
 
     on_chat_update(update) {
+        if (update.presences) {
+            log.debug(update.presences);
+            let keys = Object.keys(update.presences);
+            keys.forEach(jid => {
+                this.bridge.get_xmpp().set_presence(jid, update.presences[jid]);
+            });
+        }
         log.debug(update);
     }
 
