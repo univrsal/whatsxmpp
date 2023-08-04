@@ -1,3 +1,5 @@
+This isn't actively developed, use [slidge](https://slidge.im/core/) or [mautrix](https://docs.mau.fi/bridges/) instead.
+
 # whatsxmpp
 A small tool to bridge messages between WhatsApp and an [XMPP](https://xmpp.org/) server.
 Data is bridged via a XMPP Component and a WhatsApp Web session managed by whatsapp-web.js.
